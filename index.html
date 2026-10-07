@@ -85,8 +85,8 @@
   /* Écran de jeu */
   .gamebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .gamebar .lvl{font-weight:800;font-size:clamp(1.3rem,4.5vw,1.8rem);flex:1 1 auto}
-  .dots{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
-  .dots i{width:14px;height:14px;border-radius:50%;background:rgba(35,50,92,.18);display:inline-block}
+  .dots{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .dots i{width:11px;height:11px;border-radius:50%;background:rgba(35,50,92,.18);display:inline-block}
   .dots i.done{background:var(--go)}
   .dots i.now{background:var(--sun)}
   .stars{background:var(--white);border-radius:999px;padding:4px 16px;font-weight:800;font-size:1.4rem;box-shadow:0 3px 0 rgba(35,50,92,.15)}
@@ -272,19 +272,23 @@
   'use strict';
 
   /* ================= RÉGLAGES DU JEU ================= */
-  const WORDS_PER_LEVEL = 3;   // nombre de mots joués par niveau
   const MAX_LIVES = 10;        // erreurs autorisées sur toute la partie
   const ERRORS_BEFORE_MIX = 2; // erreurs sur un même mot avant de le remélanger
   const SPEECH_RATE = 0.6;     // vitesse de la voix (1 = normal, plus petit = plus lent)
 
   /* 10 niveaux, du plus simple au plus dur (programme de CP) */
   const LEVELS = [
-    { title: 'Syllabes simples',       words: [['lama','🦙'],['moto','🏍️'],['vélo','🚲'],['judo','🥋'],['kiwi','🥝'],['zéro','0️⃣']] },
-    { title: 'Mots de 3 syllabes',     words: [['radio','📻'],['piano','🎹'],['koala','🐨'],['kayak','🛶'],['canapé','🛋️'],['kimono','👘']] },
-    { title: 'Le e muet',              words: [['lune','🌙'],['robe','👗'],['olive','🫒'],['tomate','🍅'],['salade','🥗'],['pirate','🏴‍☠️']] },
-    { title: 'Plus longs avec e muet', words: [['banane','🍌'],['tulipe','🌷'],['cabane','🛖'],['otarie','🦭'],['ananas','🍍'],['pomme','🍎']] },
+    { title: 'Syllabes simples',       words: [['lama','🦙'],['moto','🏍️'],['vélo','🚲'],['judo','🥋'],['kiwi','🥝'],['zéro','0️⃣'],
+                                                ['papa','👨'],['papi','👴'],['mamie','👵'],['ami','🤝'],['mini','🐜'],['vis','🔩'],['Mars','🔴']] },
+    { title: 'Mots de 3 syllabes',     words: [['radio','📻'],['piano','🎹'],['koala','🐨'],['kayak','🛶'],['canapé','🛋️'],['kimono','👘'],
+                                                ['caméra','📷'],['numéro','🔢']] },
+    { title: 'Le e muet et les lettres muettes', words: [['lune','🌙'],['robe','👗'],['olive','🫒'],['tomate','🍅'],['salade','🥗'],['pirate','🏴‍☠️'],
+                                                ['image','🖼️'],['orage','⛈️'],['plume','🪶'],['tenue','🧑‍🚀'],['robot','🤖'],['petit','🤏'],['bras','💪']] },
+    { title: 'Plus longs avec e muet', words: [['banane','🍌'],['tulipe','🌷'],['cabane','🛖'],['otarie','🦭'],['ananas','🍍'],['pomme','🍎'],
+                                                ['table','🍽️'],['câble','🔌'],['licorne','🦄'],['poterie','🏺'],['planète','🪐'],['cratère','🌑'],['kilomètre','🛣️']] },
     { title: 'Les sons ou et on',      words: [['loup','🐺'],['poule','🐔'],['mouton','🐑'],['bonbon','🍬'],['souris','🐭'],['nounours','🧸']] },
-    { title: 'Les sons ch et oi',      words: [['chat','🐱'],['vache','🐄'],['cheval','🐴'],['roi','🤴'],['poire','🍐'],['étoile','⭐']] },
+    { title: 'Les sons ch et oi',      words: [['chat','🐱'],['vache','🐄'],['cheval','🐴'],['roi','🤴'],['poire','🍐'],['étoile','⭐'],
+                                                ['roche','🪨'],['peluche','🐻'],['machine','⚙️']] },
     { title: 'Les sons an, in, eau',   words: [['lapin','🐰'],['sapin','🎄'],['orange','🍊'],['gant','🧤'],['bateau','⛵'],['cadeau','🎁']] },
     { title: 'Les sons ai, ei, gn, ill',words: [['maison','🏠'],['fraise','🍓'],['baleine','🐋'],['montagne','⛰️'],['abeille','🐝'],['soleil','☀️']] },
     { title: 'Les sons ien, oin, ph, gu',words: [['chien','🐶'],['pingouin','🐧'],['éléphant','🐘'],['guitare','🎸'],['girafe','🦒'],['nuage','☁️']] },
@@ -530,14 +534,10 @@
   }
 
   function pickWords(l) {
-    const pool = LEVELS[l].words;
-    let seen = (state.seen[l] || []).filter(w => pool.some(p => p[0] === w));
-    let fresh = pool.filter(p => !seen.includes(p[0]));
-    if (fresh.length < WORDS_PER_LEVEL) { seen = []; fresh = pool.slice(); }
-    const pick = fresh.sort(() => Math.random() - .5).slice(0, WORDS_PER_LEVEL);
-    state.seen[l] = seen.concat(pick.map(p => p[0]));
-    save();
-    return pick;
+    // tous les mots du niveau doivent être réussis, dans un ordre mélangé
+    const all = LEVELS[l].words.slice();
+    for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+    return all;
   }
 
   function startGame() {
@@ -693,7 +693,7 @@
   function renderLevel() {
     if (mode !== 'game') return;
     const dots = queue.map((_, k) => `<i class="${k < wordIdx ? 'done' : k === wordIdx ? 'now' : ''}"></i>`).join('');
-    $('#lvlLabel').innerHTML = `Niveau ${level + 1} / ${LEVELS.length}<span class="dots" aria-label="Mot ${wordIdx + 1} sur ${queue.length}">${dots}</span>`;
+    $('#lvlLabel').innerHTML = `Niveau ${level + 1} / ${LEVELS.length} <small style="font-size:.6em;opacity:.7">· mot ${wordIdx + 1} / ${queue.length}</small><span class="dots" aria-label="Mot ${wordIdx + 1} sur ${queue.length}">${dots}</span>`;
   }
   function renderScore() { $('#stars').textContent = score; }
   function renderHearts(animate) {
