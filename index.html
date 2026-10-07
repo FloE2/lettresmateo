@@ -60,7 +60,14 @@
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--sky-deep)}
   .btn.big{font-size:1.35rem;padding:14px 22px}
   .btn.go{background:var(--go);color:#fff;box-shadow:0 4px 0 #2f9a68}
-  .btn.hint{background:var(--sun);box-shadow:0 4px 0 #d9a21c}
+  .btn.hint{background:var(--sun);box-shadow:0 4px 0 #d9a21c;display:inline-flex;align-items:center;gap:10px}
+  .btn.hint .cost{display:inline-flex;align-items:center;gap:2px;background:var(--white);border-radius:999px;padding:0 10px;font-size:1.15rem;color:#d64545}
+  .stars{position:relative}
+  .stars.hit{animation:starsHit .5s}
+  .lost{position:fixed;z-index:120;pointer-events:none;font:800 1.8rem var(--ui);color:#d64545;display:flex;align-items:center;gap:2px;
+        animation:lost 1.3s ease-out forwards}
+  @keyframes starsHit{0%,100%{transform:translateX(0);background:var(--white)}20%,60%{transform:translateX(-7px);background:#ffd6d6}40%,80%{transform:translateX(7px);background:#ffd6d6}}
+  @keyframes lost{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1;transform:translateY(10px) scale(1.2)}100%{opacity:0;transform:translateY(70px) scale(1)}}
   :focus-visible{outline:3px solid var(--ink);outline-offset:3px}
   .msg{min-height:1.4em;margin:6px 2px 0;color:#d64545;font-weight:700}
   .tools{margin-top:4px}
@@ -178,7 +185,7 @@
     </div>
 
     <div class="bar" id="playBar" hidden>
-      <button class="btn hint big" id="hintBtn" type="button">💡 Indice</button>
+      <button class="btn hint big" id="hintBtn" type="button" aria-label="Indice : coûte une étoile">💡 Indice <span class="cost" aria-hidden="true">−1 ⭐</span></button>
       <button class="btn big" id="listenBtn" type="button">👂 Écouter le mot</button>
       <button class="btn big" id="newBtn" type="button">✏️ Nouveau mot</button>
     </div>
@@ -213,8 +220,8 @@
   const WORDS = {
     1: [['lama','🦙'],['moto','🏍️'],['vélo','🚲'],['canapé','🛋️'],['judo','🥋'],
         ['radio','📻'],['piano','🎹'],['koala','🐨'],['kimono','👘'],['kayak','🛶']],
-    2: [['lune','🌙'],['robe','👗'],['olive','🫒'],['tomate','🍅'],['banane','🍌'],
-        ['tulipe','🌷'],['salade','🥗'],['cabane','🛖'],['otarie','🦭'],['pirate','🏴‍☠️']]
+    2: [['lune','🌙'],['robe','👗'],['pile','🔋'],['tomate','🍅'],['banane','🍌'],
+        ['tulipe','🌷'],['salade','🥗'],['patate','🥔'],['malade','🤒'],['pirate','🏴‍☠️']]
   };
   const KNOWN = {};
   for (const lv of [1, 2]) WORDS[lv].forEach(([w, e], i) => { KNOWN[w] = { e, lv, i }; });
@@ -427,8 +434,24 @@
     const empties = filled.map((f, i) => f ? -1 : i).filter(i => i >= 0).sort(() => Math.random() - .5);
     for (const i of empties) {
       const t = tiles.find(t => t.slot === null && !t.moving && !t.drag && t.ch === word[i]);
-      if (t) { tryPlace(t, i); return; }
+      if (t) { loseStar(); tryPlace(t, i); return; }
     }
+  }
+
+  // ---------- Un indice coûte une étoile ----------
+  function loseStar() {
+    if (state.stars <= 0) return;
+    state.stars--; save(); renderStars();
+    sound('lose');
+    const box = $('.stars'), r = box.getBoundingClientRect();
+    box.classList.remove('hit'); void box.offsetWidth; box.classList.add('hit');
+    const f = document.createElement('div');
+    f.className = 'lost';
+    f.textContent = '−1 ⭐';
+    f.style.left = Math.max(8, r.left + r.width / 2 - 40) + 'px';
+    f.style.top = (r.bottom + 4) + 'px';
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 1400);
   }
 
   // ---------- Victoire ----------
@@ -590,6 +613,7 @@
       o.connect(g); g.connect(ac.destination);
       o.start(t0); o.stop(t0 + .4);
     }
+    else if (kind === 'lose') { tone(520, 0, .14, 'triangle', .12); tone(390, .12, .2, 'triangle', .12); }
     else if (kind === 'win') { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i * .13, .25, 'triangle', .14)); }
   }
   function speak(text, force) {
